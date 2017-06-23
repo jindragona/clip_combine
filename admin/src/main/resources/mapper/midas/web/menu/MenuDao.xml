@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.menu.dao.MenuDao">
+
+	<select id="getUpperMenuTreeList" resultType="com.kt.midas.adm.web.menu.vo.MenuTreeVO">
+		SELECT
+			MNU_ID AS menuId,
+			MNU_NM AS label
+		FROM TB_SYS_MNU
+		WHERE MNU_LVL = '0'
+		AND USE_YN = 'Y'
+		ORDER BY MNU_ODR
+	</select>
+	
+	<select id="getMenuTreeList" parameterType="int" resultType="com.kt.midas.adm.web.menu.vo.MenuTreeVO">
+		SELECT
+			MNU_ID AS menuId,
+			MNU_NM AS label
+		FROM TB_SYS_MNU
+		WHERE UPR_MNU_ID = #{value}
+		AND USE_YN = 'Y'
+		ORDER BY MNU_ODR
+	</select>
+	
+	<select id="getMenuDetail" parameterType="int" resultType="com.kt.midas.adm.web.menu.vo.MenuVO">
+		SELECT
+			LOW.MNU_ID AS menuId,
+			LOW.MNU_NM as menuName,
+			LOW.UPR_MNU_ID as upperMenuId,
+			CASE
+				WHEN LOW.UPR_MNU_ID != 0 AND LOW.UPR_MNU_ID IS NOT NULL THEN (SELECT MNU_NM FROM TB_SYS_MNU WHERE MNU_ID = LOW.UPR_MNU_ID)
+				ELSE 'ROOT'
+			END AS upperMenuName,
+			LOW.MNU_LVL as menuLevel,
+			LOW.MNU_ODR as menuOrder,
+			LOW.MNU_TYPE as menuType,
+			LOW.USE_YN as useYn,
+			CASE
+				WHEN LOW.USE_YN = 'Y' THEN '사용'
+				ELSE '미사용'
+			END AS useYnName,
+			LOW.MNU_URL as menuUrl,
+			LOW.MNU_DESC as menuDesc,
+			TO_CHAR(LOW.INP_DTT, 'YYYY-MM-DD HH24:MI:SS') as insDt,
+			LOW.INPR_ID as insUser,
+			LOW.INPR_NM as insUserName
+		FROM TB_SYS_MNU LOW
+		WHERE MNU_ID = #{value}
+	</select>
+	
+	<insert id="insert" parameterType="com.kt.midas.adm.web.menu.vo.MenuTO">
+		INSERT INTO TB_SYS_MNU
+		(
+			MNU_ID, MNU_NM, UPR_MNU_ID, MNU_LVL, MNU_ODR,
+			MNU_TYPE, USE_YN, MNU_URL, MNU_DESC, INP_DTT,
+			INPR_ID, INPR_NM
+		)
+		VALUES
+		(
+			NEXTVAL('SEQ_MNU_ID'), #{menuName}, #{upperMenuId}, #{menuLevel}, #{menuOrder},
+			#{menuType}, #{useYn}, #{menuUrl}, #{menuDesc}, NOW(),
+			#{insUser}, #{insUserName}
+		)
+	</insert>
+	
+	<update id="update" parameterType="com.kt.midas.adm.web.menu.vo.MenuTO">
+		UPDATE TB_SYS_MNU
+		SET
+			MNU_NM = #{menuName},
+			MNU_ODR = #{menuOrder},
+			MNU_TYPE = #{menuType},
+			USE_YN = #{useYn},
+			MNU_URL = #{menuUrl},
+			MNU_DESC = #{menuDesc}
+		WHERE MNU_ID = #{menuId}
+	</update>
+	
+	<select id="getMenuList" parameterType="int" resultType="com.kt.midas.adm.web.menu.vo.MenuVO">
+		WITH RECURSIVE MNU_VIEW(MNU_ID, UPR_MNU_ID, MNU_ODR, MNU_NM, MNU_PATH, LEVEL, PATH, CYCLE) AS
+		(
+		    SELECT G.MNU_ID, G.UPR_MNU_ID, G.MNU_ODR, G.MNU_NM, 'ROOT' MNU_PATH, 0, ARRAY[G.MNU_ID], FALSE 
+		    	FROM TB_SYS_MNU G WHERE G.UPR_MNU_ID IS NULL
+		    UNION ALL
+		    SELECT B.MNU_ID, B.UPR_MNU_ID, B.MNU_ODR, B.MNU_NM, (W.MNU_PATH||' > '||B.MNU_NM) AS MNU_PATH, LEVEL+1, PATH||B.MNU_ODR||B.MNU_ID, B.MNU_ID=ANY(PATH) 
+		    	FROM MNU_VIEW W, TB_SYS_MNU B WHERE W.MNU_ID=B.UPR_MNU_ID AND NOT CYCLE
+		)
+		SELECT 
+			W.MNU_ID AS menuId, 
+			W.UPR_MNU_ID AS upperMenuId, 
+			LPAD('', W.LEVEL)||W.MNU_NM AS menuName, 
+			W.MNU_PATH AS pathName, 
+			W.LEVEL, 
+			W.PATH, 
+			W.MNU_ODR 
+		FROM MNU_VIEW W 
+		INNER JOIN TB_SYS_MNU_ROL R ON W.MNU_ID=R.MNU_ID AND R.ROL_ID = #{value}
+		WHERE W.MNU_ID != 0
+		ORDER BY PATH, MNU_ODR
+	</select>
+	
+	<select id="notMappingMenu" parameterType="int" resultType="com.kt.midas.adm.web.menu.vo.MenuVO">
+		WITH RECURSIVE MNU_VIEW(MNU_ID, UPR_MNU_ID, MNU_ODR, MNU_NM, MNU_PATH, LEVEL, PATH, CYCLE) AS
+		(
+		    SELECT G.MNU_ID, G.UPR_MNU_ID, G.MNU_ODR, G.MNU_NM, 'ROOT' MNU_PATH, 0, ARRAY[G.MNU_ID], FALSE 
+		    	FROM TB_SYS_MNU G WHERE G.UPR_MNU_ID IS NULL
+		    UNION ALL
+		    SELECT B.MNU_ID, B.UPR_MNU_ID, B.MNU_ODR, B.MNU_NM, (W.MNU_PATH||' > '||B.MNU_NM) AS MNU_PATH, LEVEL+1, PATH||B.MNU_ODR||B.MNU_ID, B.MNU_ID=ANY(PATH) 
+		    	FROM MNU_VIEW W, TB_SYS_MNU B WHERE W.MNU_ID=B.UPR_MNU_ID AND NOT CYCLE
+		)
+		SELECT 
+			W.MNU_ID AS menuId, 
+			W.UPR_MNU_ID AS upperMenuId, 
+			LPAD('', W.LEVEL)||W.MNU_NM AS menuName, 
+			W.MNU_PATH AS pathName, 
+			W.LEVEL, 
+			W.PATH, 
+			W.MNU_ODR 
+		FROM MNU_VIEW W 
+		LEFT OUTER JOIN TB_SYS_MNU_ROL R ON W.MNU_ID=R.MNU_ID AND R.ROL_ID = #{value}
+		WHERE R.MNU_ID IS NULL 
+		AND W.MNU_ID != 0
+		ORDER BY PATH, MNU_ODR
+	</select>
+	
+	<select id="getMenuIdOrUpperMenuId" parameterType="String" resultType="com.kt.midas.adm.web.menu.vo.MenuVO">
+		SELECT
+			MNU_ID AS menuId,
+			UPR_MNU_ID AS upperMenuId
+		FROM TB_SYS_MNU
+		WHERE MNU_URL = #{value}
+	</select>
+	
+	<insert id="mappingMenu" parameterType="com.kt.midas.adm.web.userauth.vo.UserMenuAuthTO">
+		INSERT INTO TB_SYS_MNU_ROL
+		(
+			ROL_ID, MNU_ID
+		)
+		VALUES
+		(
+			#{rolId}, #{menuId}
+		)
+	</insert>
+	
+	<delete id="mappingCloseMenu" parameterType="com.kt.midas.adm.web.userauth.vo.UserMenuAuthTO">
+		DELETE FROM TB_SYS_MNU_ROL
+		WHERE ROL_ID = #{rolId}
+		AND MNU_ID = #{menuId}
+	</delete>
+	
+	<delete id="removeAuthMenu" parameterType="int">
+		DELETE FROM TB_SYS_MNU_ROL
+		WHERE MNU_ID = #{value}
+	</delete>
+	
+	<delete id="removeUpperMenu" parameterType="int">
+		DELETE FROM TB_SYS_MNU
+		WHERE UPR_MNU_ID = #{value}
+	</delete>
+	
+	<delete id="removeMenu" parameterType="int">
+		DELETE FROM TB_SYS_MNU
+		WHERE MNU_ID = #{value}
+	</delete>
+</mapper>

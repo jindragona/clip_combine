@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true" scan="true" scanPeriod="30 seconds">
+
+	<contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+		<resetJUL>true</resetJUL>
+	</contextListener>
+
+	<!-- To enable JMX Management -->
+	<jmxConfigurator />
+
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger %msg%n</pattern>
+		</encoder>
+	</appender>
+
+	<appender name="ERROR_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender" level="INFO">
+		<file>${midas.logs.path}/error.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${midas.logs.path}/history/%d{yyyy-MM-dd,aux}/error.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>30</maxHistory>
+			<cleanHistoryON-START>false</cleanHistoryON-START>
+		</rollingPolicy>
+		<encoder>
+			<pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="TRACE_LOG" class="ch.qos.logback.core.rolling.RollingFileAppender" level="INFO">
+		<file>${midas.logs.path}/trace.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${midas.logs.path}/history/%d{yyyy-MM-dd,aux}/trace.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>30</maxHistory>
+			<cleanHistoryON-START>false</cleanHistoryON-START>
+		</rollingPolicy>
+		<encoder>
+			<pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<!-- Biz logging -->
+	<appender name="SERVICE_LOG"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+			<file>${midas.logs.path}/service.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${midas.logs.path}/history/%d{yyyy-MM-dd,aux}/service.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>720</maxHistory>
+			<cleanHistoryON-START>false</cleanHistoryON-START>
+		</rollingPolicy>
+		<encoder>
+			<pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger \(%C{0}:%L\) %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="console_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>1024</queueSize>
+		<appender-ref ref="console" />
+	</appender> 
+	
+	<appender name="TRACE_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>1024</queueSize>
+		<appender-ref ref="TRACE_LOG" />
+	</appender> 
+	
+	<appender name="ERROR_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>1024</queueSize>
+		<appender-ref ref="ERROR_LOG" />
+	</appender> 
+	
+	<appender name="SERVICE_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>1024</queueSize>
+		<appender-ref ref="SERVICE_LOG" />
+	</appender> 
+	
+	<!-- 3rdparty Loggers -->
+	<logger name="org.mybatis.spring" level="INFO"/>
+	
+	<!-- [START] SQL Logger -->
+	<logger name="midas.adm" level="INFO"/><!-- SQL Mapper package Logging : TRACE -->
+	<!-- [END] SQL Logger -->
+		
+    <logger name="org.springframework" level="INFO"/>
+    <logger name="com.kt.midas" level="INFO"/>
+    
+    <!-- 관리자외 수정 금지 -->
+    <logger name="TRACE_LOG" level="INFO">
+	   <appender-ref ref="TRACE_ASYNC" />
+	</logger>
+
+    <!-- 관리자외 수정 금지 -->
+    <logger name="ERROR_LOG" level="ERROR">
+	   <appender-ref ref="ERROR_ASYNC" />
+	</logger>
+
+    <!-- Root Logger -->
+	<root level="INFO">
+		<appender-ref ref="SERVICE_ASYNC" />
+	</root>
+
+</configuration>

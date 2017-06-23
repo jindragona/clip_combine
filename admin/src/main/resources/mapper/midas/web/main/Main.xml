@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.main.dao.MainDao">
+	
+	<select id="getLftAge" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT dummytable.dummy, CASE WHEN datatable.send_cnt IS NOT NULL THEN datatable.send_cnt ELSE 0 END AS sendCnt, COALESCE(datatable.rpy_cnt,0) AS rpyCnt
+		FROM (
+		SELECT CASE WHEN CHAR_LENGTH(TRIM(to_char(dummy,'99'))) = 1 THEN TRIM(to_char(dummy,'99')) || '0' ELSE TRIM(to_char(dummy,'99')) END AS dummy
+		FROM generate_series(0,60,10) dummy) dummytable
+		LEFT OUTER
+		JOIN (
+		SELECT SUM(lft_snd_cnt) AS send_cnt, cust_age, SUM(lft_rpy_cnt) AS rpy_cnt
+		FROM tb_lft_snd_stat
+		WHERE mdf_dtt > NOW() - INTERVAL '5 years'
+		GROUP BY cust_age) datatable ON dummytable.dummy = datatable.cust_age
+	</select>
+	
+	<select id="getLftGdr" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT SUM(lft_snd_cnt) AS sendCnt, cust_gdr AS custGdr, SUM(lft_rpy_cnt) AS rpyCnt
+		FROM tb_lft_snd_stat
+		WHERE mdf_dtt > NOW() - INTERVAL '5 years'
+		GROUP BY cust_gdr
+	</select>
+	
+	<select id="getLftSndMonthStat" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT dummy, send_cnt AS sendCnt, rpy_cnt AS rpyCnt, CASE WHEN send_cnt != 0 THEN trunc((rpy_cnt*100)/send_cnt,2) ELSE 0 END AS rate
+		FROM (
+		SELECT dummytable.dummy, CASE WHEN datatable.send_cnt IS NOT NULL THEN datatable.send_cnt ELSE 0 END AS send_cnt, CASE WHEN datatable.rpy_cnt IS NOT NULL THEN datatable.rpy_cnt ELSE 0 END AS rpy_cnt
+		FROM (
+		SELECT to_char(dummy,'YYYYMM') AS dummy
+		FROM generate_series(NOW() - INTERVAL '11 months', NOW(), '1 month') dummy) dummytable
+		LEFT OUTER
+		JOIN 
+							 (
+		SELECT SUM(lft_snd_cnt) AS send_cnt, SUBSTRING(snd_dt
+		FROM 1 FOR 6) AS sub_snd_dt, SUM(lft_rpy_cnt) AS rpy_cnt
+		FROM tb_lft_snd_stat
+		WHERE to_date(snd_dt, 'YYYYMMDD') &gt;= NOW() - INTERVAL '11 months' AND to_date(snd_dt, 'YYYYMMDD') &lt;= NOW()
+		GROUP BY sub_snd_dt) datatable ON dummytable.dummy = datatable.sub_snd_dt) rate
+	</select>
+	
+	<select id="getBannAge" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT dummytable.dummy, CASE WHEN datatable.send_cnt IS NOT NULL THEN datatable.send_cnt ELSE 0 END AS sendCnt
+		FROM (
+		SELECT CASE WHEN CHAR_LENGTH(TRIM(to_char(dummy,'99'))) = 1 THEN TRIM(to_char(dummy,'99')) || '0' ELSE TRIM(to_char(dummy,'99')) END AS dummy
+		FROM generate_series(0,60,10) dummy) dummytable
+		LEFT OUTER
+		JOIN (
+		SELECT sum(viw_cnt) AS send_cnt, cust_age
+		FROM tb_bann_viw_stat hst
+		WHERE mdf_dtt > NOW() - INTERVAL '5 years'
+		GROUP BY cust_age) datatable ON dummytable.dummy = datatable.cust_age
+	</select>
+	
+	<select id="getBannGdr" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT sum(viw_cnt) as sendCnt, cust_gdr as custGdr
+		FROM tb_bann_viw_stat hst
+		WHERE mdf_dtt > NOW() - INTERVAL '5 years'
+		GROUP BY cust_gdr
+	</select>
+	
+	<select id="getBannSndMonthStat" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT dummytable.dummy, CASE WHEN datatable.send_cnt IS NOT NULL THEN datatable.send_cnt ELSE 0 END AS sendCnt
+		FROM (
+		SELECT to_char(dummy,'YYYYMM') AS dummy
+		FROM generate_series(NOW() - INTERVAL '11 months', NOW(), '1 month') dummy) dummytable
+		LEFT OUTER
+		JOIN (
+		SELECT sum(viw_cnt) AS send_cnt, SUBSTRING(viw_dt
+		FROM 1 FOR 6) AS sub_snd_dt
+		FROM tb_bann_viw_stat
+		WHERE to_date(viw_dt, 'YYYYMMDD') &gt;= NOW() - INTERVAL '11 months' AND to_date(viw_dt, 'YYYYMMDD') &lt;= NOW()
+		GROUP BY sub_snd_dt) datatable ON dummytable.dummy = datatable.sub_snd_dt
+	</select>
+	
+	<select id="getMcrdAge" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT dummytable.dummy, CASE WHEN datatable.send_cnt IS NOT NULL THEN datatable.send_cnt ELSE 0 END AS sendCnt
+		FROM (
+		SELECT CASE WHEN CHAR_LENGTH(TRIM(to_char(dummy,'99'))) = 1 THEN TRIM(to_char(dummy,'99')) || '0' ELSE TRIM(to_char(dummy,'99')) END AS dummy
+		FROM generate_series(0,60,10) dummy) dummytable
+		LEFT OUTER
+		JOIN (SELECT count(*) send_cnt, cust_age
+		from tb_mcrd_isu group by cust_age) datatable ON dummytable.dummy = datatable.cust_age
+	</select>
+	
+	<select id="getMcrdGdr" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT COUNT(*) AS sendCnt, cust_gdr as custGdr
+		FROM tb_mcrd_isu isu
+		GROUP BY cust_gdr
+	</select>
+	
+	<select id="getMcrdArea" resultType="com.kt.midas.adm.web.main.vo.MainVO">
+		SELECT TRIM(split_part(cust_adr, ' ',1) ||' '|| split_part(cust_adr, ' ',2)) AS custAddr, COUNT(*) AS sendCnt
+		FROM tb_mcrd_isu
+		GROUP BY custAddr
+		order by sendCnt desc
+		limit 10
+	</select>
+	
+	<select id="searchUserIdPwd" parameterType="com.kt.midas.adm.web.main.vo.PwdModTO" resultType="int">
+		SELECT 
+			COUNT(*) AS CNT
+		FROM TB_SYS_USR
+		WHERE USR_ID = #{userId}
+		AND USR_PWD = #{encOldPwd}
+	</select>
+	
+	<update id="pwdMod" parameterType="com.kt.midas.adm.web.main.vo.PwdModTO">
+		UPDATE TB_SYS_USR
+		SET
+			USR_PWD = #{encNewPwd},
+			PWD_MDF_DT = #{pwdModDate}
+		WHERE USR_ID = #{userId}
+		AND USR_PWD = #{encOldPwd}
+	</update>
+	
+	<update id="updateAuthNo" parameterType="com.kt.midas.adm.web.main.vo.AuthVO">
+		UPDATE TB_SYS_USR
+		SET
+		<if test='authStat =="Y"'>
+            CTF_NUM = #{authNo},
+			CTF_EXPIR_DTT = now()
+        </if>
+        <if test='authStat !="Y"'>
+            CTF_NUM = NULL,
+			CTF_EXPIR_DTT = NULL
+        </if>
+		WHERE USR_ID = #{userId}
+		AND PHONE_NUM = #{authPhone}
+	</update>
+</mapper>

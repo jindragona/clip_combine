@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+          http://www.springframework.org/schema/beans/spring-beans.xsd
+          http://www.springframework.org/schema/security
+          http://www.springframework.org/schema/security/spring-security.xsd">
+    
+    <!-- Spring Security Configuration Start -->
+    <security:global-method-security pre-post-annotations="enabled" secured-annotations="enabled"/>
+    <security:http pattern="/resources/**" security="none"></security:http>
+    <security:http pattern="/login.do" security="none"/>
+    <security:http pattern="/duplicated" security="none"/>
+    <security:http pattern="/updateAuthNo" security="none"/>
+    
+    <security:http use-expressions="true" auto-config="false" create-session="ifRequired" authentication-manager-ref="authenticationManager" access-decision-manager-ref="accessDecisionManager">
+        <security:form-login  
+            login-page="/login.do"
+            authentication-success-handler-ref="customAuthenticationSuccessHandler"
+   			authentication-failure-handler-ref="customAuthenticationFailureHandler"
+            default-target-url="/office/main"
+            login-processing-url="/gt/loginAction"
+            username-parameter="login_id"
+            password-parameter="login_pass" always-use-default-target="false"
+            authentication-failure-url="/login.do"
+        />
+        
+        <security:intercept-url pattern="/office/**" access="hasRole('ROLE_ADMIN')" />
+        <security:csrf disabled="true"/>
+        <security:logout logout-url="/logout" logout-success-url="/login.do" invalidate-session="true" delete-cookies="JSESSIONID"/>
+        <security:access-denied-handler error-page="/error/error_access.jsp"/>
+        
+		<security:custom-filter ref="midasDupulicatedSessionFilter" before="FORM_LOGIN_FILTER"/>
+        
+        <security:session-management session-fixation-protection="newSession">
+			<security:concurrency-control max-sessions="1"  
+                                          session-registry-alias="sessionRegistry"  
+                                          error-if-maximum-exceeded="true"
+                                          expired-url="/login.do"/>
+        </security:session-management>
+        
+        <security:expression-handler ref="defaultMethodSecurityExpressionHandler"/>
+        <security:headers>
+			<security:frame-options policy="SAMEORIGIN"/>
+		</security:headers>
+    </security:http>
+    
+    <beans profile="local">
+    	<bean id="adminAuthenticationProvider" class="com.kt.midas.adm.common.security.CustomAuthenticationProvider">
+	        <property name="userDetailsService" ref="loginDetailService"/>
+	    </bean>
+	</beans>
+	<beans profile="dev" >
+		<bean id="adminAuthenticationProvider" class="com.kt.midas.adm.common.security.CustomAuthenticationProvider">
+	        <property name="userDetailsService" ref="loginDetailService"/>
+	    </bean>
+	</beans>
+	<beans profile="tb">
+		 <bean id="adminAuthenticationProvider" class="com.kt.midas.adm.common.security.LdapAuthenticationProvider">
+	        <property name="userDetailsService" ref="loginDetailService"/>
+	    </bean>
+	</beans>
+	<beans profile="real">
+		 <bean id="adminAuthenticationProvider" class="com.kt.midas.adm.common.security.LdapAuthenticationProvider">
+	        <property name="userDetailsService" ref="loginDetailService"/>
+	    </bean>
+	</beans>
+	
+	<beans>
+	    <bean id="midasDupulicatedSessionFilter" class="com.kt.midas.adm.common.filter.MidasDupulicatedSessionFilter">
+	        <constructor-arg name="sessionRegistry" ref="sessionRegistry"/>
+	        <constructor-arg name="userDetailsService" ref="loginDetailService"/>
+	    </bean>
+	    
+	    <bean id="sessionRegistry" class="org.springframework.security.core.session.SessionRegistryImpl" />
+	    <bean id="loginDetailService" class="com.kt.midas.adm.web.login.service.LoginDetailService"/>
+	    
+	    <security:authentication-manager id="authenticationManager">  
+	        <security:authentication-provider ref="adminAuthenticationProvider"/>
+	    </security:authentication-manager>
+		
+	    <bean id="customAuthenticationFailureHandler" class="com.kt.midas.adm.common.auth.CustomAuthenticationFailureHandler"/>
+	    <bean id="customAuthenticationSuccessHandler" class="com.kt.midas.adm.common.auth.CustomAuthenticationSuccessHandler"/>
+	    
+	    <bean id="customLogoutSuccessHandler" class="com.kt.midas.adm.common.auth.CustomLogoutSuccessHandler">
+	    	<constructor-arg name="sessionRegistry" ref="sessionRegistry"/>
+	    	<constructor-arg name="userDetailsService" ref="loginDetailService"/>
+	    </bean>
+	    
+	    <bean id="roleHierarchy" class="org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl">
+	        <property name="hierarchy">
+	            <value>
+	                ROLE_SUPER > ROLE_ADMIN
+	                ROLE_ADMIN > ROLE_USER
+	                ROLE_USER > ROLE_ANONYMOUS
+	            </value>
+	        </property>
+	    </bean>
+		
+	    <bean id="roleHierarchyVoter" class="org.springframework.security.access.vote.RoleHierarchyVoter">
+	        <constructor-arg ref="roleHierarchy" />
+	    </bean>
+	    
+	    <bean id="defaultWebSecurityExpressionHandler"
+	          class="org.springframework.security.web.access.expression.DefaultWebSecurityExpressionHandler">
+	        <property name="roleHierarchy" ref="roleHierarchy"/>
+	    </bean>
+	    
+	    <bean id="defaultMethodSecurityExpressionHandler"
+	          class="org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler">
+	        <property name="roleHierarchy" ref="roleHierarchy"/>
+	    </bean>
+	    
+	    <bean id ="webExpressionVoter" class="org.springframework.security.web.access.expression.WebExpressionVoter">
+	        <property name="expressionHandler" ref="defaultWebSecurityExpressionHandler"></property>
+	    </bean>
+	    <bean id="authenticatedVoter" class="org.springframework.security.access.vote.AuthenticatedVoter"></bean>
+	    <bean id="roleVoter" class="org.springframework.security.access.vote.RoleVoter" />
+	    
+	    <bean id="accessDecisionManager" class="org.springframework.security.access.vote.AffirmativeBased">
+	        <constructor-arg>
+	            <list>
+	                <ref bean="roleHierarchyVoter"/>
+	                <ref bean="webExpressionVoter"/>
+	                <ref bean="authenticatedVoter"/>
+	                <ref bean="roleVoter"/>
+	            </list>
+	        </constructor-arg>
+	    </bean>     
+    <!-- Spring Security Configuration End -->
+    </beans>
+</beans>

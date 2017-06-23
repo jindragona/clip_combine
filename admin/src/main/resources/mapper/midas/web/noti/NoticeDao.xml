@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.notice.dao.NoticeDao">
+
+    <select id="TotalRecords" resultType="int">
+            SELECT
+                COUNT(*) AS totalRecords
+            FROM TB_CMN_NOTI
+    </select>
+
+    <sql id="searchSql">
+        <if test='notiName != null and notiName != ""'>
+            AND NOTI_TIT LIKE '%' || #{notiName} || '%'
+        </if>
+        
+        <if test='usrType != null and usrType != ""'>
+            AND USR_TYPE = #{usrType}
+        </if>
+        
+        <choose>
+        	<when test='searchType = "startDate"'>
+	        	<if test='sdate != null and sdate != ""'>
+		            AND NOTI_START_DTT >= REPLACE(#{sdate}, '-', '')
+		        </if>
+		        <if test='edate != null and edate != ""'>
+		            AND NOTI_START_DTT <![CDATA[ <= ]]> REPLACE(#{edate}, '-', '')
+		        </if>
+        	</when>
+        	<otherwise>
+        		<if test='sdate != null and sdate != ""'>
+		            AND NOTI_END_DTT >= REPLACE(#{sdate}, '-', '')
+		        </if>
+		        <if test='edate != null and edate != ""'>
+		            AND NOTI_END_DTT <![CDATA[ <= ]]> REPLACE(#{edate}, '-', '')
+		        </if>
+        	</otherwise>
+        </choose>
+    </sql>
+
+    <select id="findTotalRecordsBySearch" parameterType="com.kt.midas.adm.web.notice.vo.NotiSearchTO" resultType="int">
+        SELECT
+            COUNT(*) AS totalRecords
+        FROM TB_CMN_NOTI
+        <where>
+            <include refid="searchSql" />
+        </where>
+    </select>
+
+    <select id="findBySearch" parameterType="com.kt.midas.adm.web.notice.vo.NotiSearchTO" resultType="com.kt.midas.adm.web.notice.vo.NotiVO">
+            SELECT
+                LIST.notiId,
+                LIST.notiName,
+                LIST.notiContent,
+                LIST.notiYn,
+                LIST.insDt,
+                LIST.insUser,
+                LIST.insUserName,
+                LIST.stime,
+                LIST.etime,
+                LIST.usrType,
+                LIST.usrTypeName
+            FROM
+            (
+                SELECT
+                    NOTI_ID as notiId
+                    ,NOTI_TIT as notiName
+                    ,NOTI_CONT as notiContent
+                    ,NOTI_YN as notiYn
+                    ,INP_DTT as insDt
+                    ,INPR_ID as insUser
+                    ,INPR_NM as insUserName
+                    ,NOTI_START_DTT as stime
+                    ,NOTI_END_DTT as etime
+                    ,USR_TYPE as usrType
+                    ,(SELECT CD_NM FROM TB_CMN_CD WHERE CD_ID = USR_TYPE) AS usrTypeName
+                FROM TB_CMN_NOTI
+                <where>
+                    <include refid="searchSql" />
+                </where>
+                ORDER BY NOTI_ID DESC
+            ) as list
+            LIMIT 10 OFFSET (#{pageNo} - 1) <![CDATA[ * ]]> 10
+    </select>
+    
+    <insert id="insert" parameterType="com.kt.midas.adm.web.notice.vo.NotiTO">
+    	INSERT INTO TB_CMN_NOTI
+    	(
+    		NOTI_ID, NOTI_TIT, NOTI_CONT, NOTI_YN, INP_DTT,
+    		INPR_ID, INPR_NM, NOTI_START_DTT, NOTI_END_DTT, USR_TYPE
+    	)
+    	VALUES
+    	(
+    		NEXTVAL('SEQ_NOTI_ID'), #{notiName}, #{notiContent}, #{notiYn}, now(),
+    		#{insUser}, #{insUserName}, REPLACE(#{stime}, '-', ''), REPLACE(#{etime}, '-', ''), #{usrType}
+    	)
+    </insert>
+    
+    <update id="update" parameterType="com.kt.midas.adm.web.notice.vo.NotiTO">
+    	UPDATE TB_CMN_NOTI
+    	SET
+    		NOTI_TIT = #{notiName},
+    		NOTI_CONT = #{notiContent},
+    		NOTI_YN = #{notiYn},
+    		NOTI_START_DTT = REPLACE(#{stime}, '-', ''),
+    		NOTI_END_DTT = REPLACE(#{etime}, '-', ''),
+    		USR_TYPE = #{usrType}
+    	WHERE NOTI_ID = #{notiId}
+    </update>
+    
+    <delete id="deleteById" parameterType="int">
+    	DELETE FROM TB_NOTI
+    	WHERE NOTI_ID = #{value}
+    </delete>
+    
+    <select id="getNotiDetail" parameterType="int" resultType="com.kt.midas.adm.web.notice.vo.NotiVO">
+    	SELECT
+             NOTI_ID as notiId
+             ,NOTI_TIT as notiName
+             ,NOTI_CONT as notiContent
+             ,NOTI_YN as notiYn
+             ,INP_DTT as insDt
+             ,INPR_ID as insUser
+             ,INPR_NM as insUserName
+             ,NOTI_START_DTT as stime
+             ,NOTI_END_DTT as etime
+             ,USR_TYPE as usrType
+         FROM TB_CMN_NOTI
+         WHERE NOTI_ID = #{value}
+    </select>
+</mapper>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.login.dao.LoginDao">
+
+    <select id="selectByPK" parameterType="String" resultType="com.kt.midas.adm.common.vo.CommonManagerVO">
+    	SELECT 
+    		USR_SRLNUM AS userSeq,
+    		USR_ID AS userId,
+    		USR_PWD AS loginPass,
+    		USR_NM as userName,
+    		PHONE_NUM as phoneNum,
+    		CONT_NUM as contNum,
+    		HOFC_NM as hofcName,
+    		TEAM_NM as teamName,
+    		INP_DTT as insDt,
+    		INPR_ID as insUser,
+    		PWD_MDF_DT as pwdMdfDt,
+    		TO_CHAR(LAST_LOGIN_DTT, 'YYYY-MM-DD HH24:MI:SS') as lastLoginDt,
+    		PWD_ERR_CNT as pwdErrCnt,
+    		USR_TYPE as userType,
+    		INPR_NM insUserName,
+    		USR_STUS AS usrStus
+    	FROM TB_SYS_USR
+    	WHERE USR_ID = #{value}
+    </select>
+	
+    <insert id="insertLoginHist" parameterType="com.kt.midas.adm.common.vo.CommonManagerVO">
+        INSERT INTO TB_SYS_USR_ACC_HST
+        (
+			ACC_HST_ID, USR_ID, ACC_IP, ACC_TYPE, ACC_BRW, ACC_DT        	
+        )
+        VALUES
+        (
+        	NOW(), #{userId}, #{accIp}, #{accType}, #{accBrw}, TO_CHAR(NOW(), 'YYYYMMDD')
+        )
+    </insert>
+	
+	<update id="updateLoginHist" parameterType="com.kt.midas.adm.common.vo.CommonManagerVO">
+		UPDATE TB_SYS_USR
+		SET 
+			PWD_ERR_CNT = PWD_ERR_CNT + 1
+		WHERE USR_ID = #{userId}
+	</update>
+	
+    <update id="updateByPK" parameterType="com.kt.midas.adm.common.vo.CommonManagerVO">
+       UPDATE TB_SYS_USR
+       SET
+       		LAST_LOGIN_DTT = NOW(),
+       		PWD_ERR_CNT = 0
+       WHERE USR_ID = #{userId}
+    </update>
+
+	<select id="selectAuthUppMenuList" parameterType="String" resultType="com.kt.midas.adm.web.menu.vo.MenuTreeVO">
+		SELECT 
+			MNU.MNU_ID AS menuId,
+			MNU.MNU_NM AS menuName,
+			MNU.MNU_URL AS menuUrl
+		FROM TB_SYS_MNU_ROL MNU_ROL 
+		INNER JOIN TB_SYS_MNU MNU
+		ON MNU_ROL.MNU_ID = MNU.MNU_ID
+		WHERE MNU_ROL.ROL_ID IN (
+		SELECT 
+			USR_ROL.ROL_ID
+		FROM TB_SYS_USR USR
+		INNER JOIN TB_SYS_USR_ROL USR_ROL
+		ON USR.USR_ID = USR_ROL.USR_ID
+		WHERE USR.USR_ID = #{value})
+		AND MNU.MNU_LVL = '1'
+		AND MNU.USE_YN = 'Y'
+		GROUP BY MNU.MNU_ID, MNU.MNU_NM, MNU.MNU_URL
+		ORDER BY MNU.MNU_LVL, MNU.MNU_ODR
+	</select>
+	
+	<select id="selectAuthMenuList" parameterType="com.kt.midas.adm.web.login.vo.UserAuthMenuSearchTO" resultType="com.kt.midas.adm.web.menu.vo.MenuTreeVO">
+		SELECT 
+			MNU.MNU_ID AS menuId,
+			MNU.MNU_NM AS menuName,
+			MNU.MNU_URL AS menuUrl
+		FROM TB_SYS_MNU_ROL MNU_ROL
+		INNER JOIN TB_SYS_MNU MNU
+		ON MNU_ROL.MNU_ID = MNU.MNU_ID
+		WHERE MNU_ROL.ROL_ID IN (
+		SELECT 
+			USR_ROL.ROL_ID
+		FROM TB_SYS_USR USR
+		INNER JOIN TB_SYS_USR_ROL USR_ROL
+		ON USR.USR_ID = USR_ROL.USR_ID
+		WHERE USR.USR_ID = #{userId})
+		AND MNU.UPR_MNU_ID = #{menuId}
+		AND MNU.USE_YN = 'Y'
+		GROUP BY MNU.MNU_ID, MNU.MNU_NM, MNU.MNU_URL
+		ORDER BY MNU.MNU_LVL, MNU.MNU_ODR
+	</select>
+	
+	<update id="updateByLoginErrorCnt" parameterType="com.kt.midas.adm.common.vo.CommonManagerVO">
+		UPDATE TB_SYS_USR
+		SET
+			LAST_LOGIN_DTT = NOW()
+		WHERE USR_ID = #{userId}
+	</update>
+</mapper>

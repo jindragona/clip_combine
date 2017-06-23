@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.userauth.dao.UserAuthDao">
+
+	<select id="TotalRecords" resultType="int">
+		SELECT
+			COUNT(*) AS totalRecords
+		FROM TB_SYS_ROL
+    </select>
+    
+    <sql id="searchSql">
+        <if test='stime != null and !stime.equals("")'>
+            AND INP_DTT >= to_date(#{stime}, 'YYYY-MM-DD')
+        </if>
+        <if test='etime != null and !etime.equals("")'>
+            AND INP_DTT <![CDATA[ < ]]> to_date(#{etime}, 'YYYY-MM-DD')
+        </if>
+        
+        <if test='searchType != null and searchType.equals("KEY")'>
+            <if test='searchWord != null and !searchWord.equals("")'>
+	            AND ROL_NM LIKE '%'||#{searchWord}||'%'
+	        </if>
+        </if>
+        <if test='searchType != null and searchType.equals("NAME")'>
+            <if test='searchWord != null and !searchWord.equals("")'>
+	            AND INPR_NM LIKE '%'||#{searchWord}||'%'
+	        </if>
+        </if>
+    </sql>
+    
+    <select id="findTotalRecordsBySearch" parameterType="com.kt.midas.adm.web.userauth.vo.UserAuthSearchTO" resultType="int">
+        SELECT
+            COUNT(*) AS totalRecords
+        FROM TB_SYS_ROL
+        <where>
+            <include refid="searchSql" />
+        </where>
+    </select>
+    
+    <select id="findBySearch" parameterType="com.kt.midas.adm.web.userauth.vo.UserAuthSearchTO" resultType="com.kt.midas.adm.web.userauth.vo.UserAuthVO">
+		SELECT
+            LIST.rolId,
+            LIST.rolName,
+            LIST.rolDesc,
+            LIST.useYn,
+            LIST.ueYnName,
+            LIST.insDt,
+            LIST.insUser,
+            LIST.insUserName
+        FROM
+        (
+            SELECT
+                ROL_ID AS rolId,
+	    		ROL_NM as rolName,
+	    		ROL_DESC as rolDesc,
+	    		USE_YN as useYn,
+	    		CASE
+	    			WHEN USE_YN = 'Y' THEN '사용'
+	    			ELSE '미사용'
+	    		END AS ueYnName,
+	    		INP_DTT as insDt,
+	    		INPR_ID as insUser,
+	    		INPR_NM as insUserName
+            FROM TB_SYS_ROL
+            <where>
+	            <include refid="searchSql" />
+	        </where>
+            ORDER BY ROL_ID DESC
+        ) as list
+        LIMIT 10 OFFSET (#{pageNo} - 1) <![CDATA[ * ]]> 10
+	</select>
+	
+	<select id="getUserAuthDetail" parameterType="int" resultType="com.kt.midas.adm.web.userauth.vo.UserAuthVO">
+		SELECT
+			ROL_ID AS rolId,
+    		ROL_NM as rolName,
+    		ROL_DESC as rolDesc,
+    		USE_YN as useYn,
+    		CASE
+    			WHEN USE_YN = 'Y' THEN '사용'
+    			ELSE '미사용'
+    		END AS ueYnName,
+    		INP_DTT as insDt,
+    		INPR_ID as insUser,
+    		INPR_NM as insUserName
+		FROM TB_SYS_ROL
+		WHERE ROL_ID = #{value}
+	</select>
+	
+	<insert id="insert" parameterType="com.kt.midas.adm.web.userauth.vo.UserAuthTO">
+		INSERT INTO TB_SYS_ROL
+		(
+			ROL_ID, ROL_NM, USE_YN, ROL_DESC, INP_DTT, INPR_ID, INPR_NM
+		)
+		VALUES
+		(
+			NEXTVAL('SEQ_ROL_ID'), #{rolName}, #{useYn}, #{rolDesc}, NOW(), #{insUser}, #{insUserName}
+		)
+	</insert>
+	
+	<update id="update" parameterType="com.kt.midas.adm.web.userauth.vo.UserAuthTO">
+		UPDATE TB_SYS_ROL
+		SET
+			ROL_NM = #{rolName},
+			USE_YN = #{useYn},
+			ROL_DESC = #{rolDesc}
+		WHERE ROL_ID = #{rolId}
+	</update>
+	
+	<delete id="removeAllUserAuth" parameterType="int">
+		DELETE FROM TB_SYS_USR_ROL
+		WHERE ROL_ID = #{value}
+	</delete>
+	
+	<delete id="removeAllMenuAuth" parameterType="int">
+		DELETE FROM TB_SYS_MNU_ROL
+		WHERE ROL_ID = #{value}
+	</delete>
+	
+	<delete id="removeAuth" parameterType="int">
+		DELETE FROM TB_SYS_ROL
+		WHERE ROL_ID = #{value}
+	</delete>
+</mapper>

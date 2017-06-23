@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:oxm="http://www.springframework.org/schema/oxm"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.1.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.1.xsd
+		http://www.springframework.org/schema/oxm http://www.springframework.org/schema/oxm/spring-oxm-4.1.xsd">
+
+	<bean id="beanNameViewResolver" class="org.springframework.web.servlet.view.BeanNameViewResolver">
+        <property name="order" value="0" />
+    </bean>
+    
+    <bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/viewer/" />
+        <property name="suffix" value=".jsp" />
+        <property name="order" value="1" />
+        <property name="redirectHttp10Compatible" value="false" />
+    </bean>
+
+    <!-- Excel View -->
+    <bean id="baseExcel" class="com.kt.midas.adm.common.excel.ExcelView"/>
+    
+    <!-- =========================================================== -->
+    <!-- =======MultipartResolver (TempMemory:1M , UploadSize:5M) ====== -->
+    <!-- =========================================================== -->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="defaultEncoding" value="UTF-8" />
+        <property name="maxUploadSize" value="52428800" />
+        <property name="maxInMemorySize" value="1048576" />
+    </bean>
+    
+    <bean id="jacksonMessageConverter" class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+        <property name="supportedMediaTypes">
+            <list>
+                <value>application/json;charset=UTF-8</value>
+            </list>
+        </property>
+        <property name="prefixJson" value="false"></property>
+    </bean>
+    
+    <bean  class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+        <property name="messageConverters">
+            <list>
+                <ref bean="jacksonMessageConverter"/>
+            </list>
+        </property>
+    </bean>
+
+    <bean id="jacksonJsonView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+        <!--<property name="extractValueFromSingleKeyModel" value="true"></property>-->
+    </bean>
+    
+    <bean id="localeResolver" class="org.springframework.web.servlet.i18n.SessionLocaleResolver" />
+      
+    <mvc:interceptors>
+		<bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+			<property name="paramName" value="lang"></property>
+		</bean>
+		<bean class="com.kt.midas.frw.interceptor.TransactionIDGenerateInterceptor">
+			<property name="order" value="2"></property>
+		</bean>
+		<bean class="com.kt.midas.frw.interceptor.RequestTraceInterceptor">
+			<property name="captureHeaders">
+				<array>
+					<value>user-agent</value>
+					<value>content-type</value>
+					<value>accept</value>
+					<value>accept-language</value>
+				</array>
+			</property>
+			<property name="order" value="3"/>
+		</bean>
+	</mvc:interceptors>
+
+	
+	<bean class="com.kt.midas.frw.exception.MidasRestExceptionResolver">
+		<property name="defaultStatusCode" value="200" />
+		<property name="forceDefaultStatus" value="true" />
+		<property name="order" value="2"></property>
+	</bean>
+	
+</beans>

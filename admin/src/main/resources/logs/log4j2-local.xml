@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="TRACE">
+	<!-- Appender, Layout 설정 -->
+	<Appenders>
+		<Console name="console" target="SYSTEM_OUT">
+			<PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger %msg%n" />
+		</Console>
+
+		<RollingFile name="TRACE_LOG" fileName="${sys:midas.logs.path}/trace.log"
+			filePattern="${sys:midas.logs.path}/history/trace.log.%d{yyyy-MM-dd}.gz">
+			<PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger %msg%n" />
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="min">
+                <Delete basePath="${sys:midas.logs.path}" maxDepth="2">
+                    <IfFileName glob="trace.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+		</RollingFile>
+		
+		<RollingFile name="ERROR_LOG" fileName="${sys:midas.logs.path}/error.log"
+			filePattern="${sys:midas.logs.path}/history/error.log.%d{yyyy-MM-dd}.gz">
+			<PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger %msg%n" />
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="min">
+                <Delete basePath="${sys:midas.logs.path}" maxDepth="2">
+                    <IfFileName glob="error.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+		</RollingFile>
+		
+		<RollingFile name="COLLECT_LOG" fileName="${sys:midas.logs.path}/logstash-access/userpattern/userpattern.log"
+			filePattern="${sys:midas.logs.path}/logstash-access/history/userpattern/%d{yyyyMM}/userpattern.log.%d{yyyy-MM-dd}.%i.gz">
+			<PatternLayout pattern="%msg%n" />
+			<Policies>
+				<SizeBasedTriggeringPolicy size="100MB" />
+				<TimeBasedTriggeringPolicy  />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="min">
+                <Delete basePath="${sys:midas.logs.path}" maxDepth="5">
+                    <IfFileName glob="userpattern.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+		</RollingFile>
+		
+		<RollingFile name="SERVICE_LOG" fileName="${sys:midas.logs.path}/service.log"
+			filePattern="${sys:midas.logs.path}/history/service.log.%d{yyyy-MM-dd}.gz">
+			<PatternLayout pattern="[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger \(%C{0}:%L\) %msg%n" />
+			<Policies>
+				<TimeBasedTriggeringPolicy />
+			</Policies>
+			<DefaultRolloverStrategy fileIndex="min">
+                <Delete basePath="${sys:midas.logs.path}" maxDepth="2">
+                    <IfFileName glob="service.log.*" />
+                    <IfLastModified age="30d" />
+                </Delete>
+            </DefaultRolloverStrategy>
+		</RollingFile>
+	</Appenders>
+
+	<!-- Logger 설정 -->
+	<Loggers>
+		<Logger name="org.apache.ibatis" level="ERROR"/>
+		<Logger name="org.mybatis.spring" level="ERROR"/>
+	    <Logger name="org.springframework" level="INFO"/>
+	    <Logger name="com.kt.midas" level="INFO"/>
+	    
+		<Logger name="TRACE_LOGGER" level="ERROR" additivity="false">
+			<AppenderRef ref="TRACE_LOG" />
+		</Logger>
+
+		<Logger name="ERROR_LOGGER" level="ERROR" additivity="false">
+			<AppenderRef ref="ERROR_LOG" />
+		</Logger>
+
+		<Logger name="COLLECT_LOGGER" level="INFO" additivity="false">
+			<AppenderRef ref="COLLECT_LOG" />
+		</Logger>
+
+		<Root level="TRACE">
+			<AppenderRef ref="console" />
+			<AppenderRef ref="SERVICE_LOG" />
+		</Root>
+	</Loggers>
+
+</Configuration>

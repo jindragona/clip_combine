@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+    <mapping>
+        <path>/office/*</path>
+        <decorator>/WEB-INF/viewer/layout/decorator.jsp</decorator>
+    </mapping>
+    <mapping path="/login" exclue="true"/>
+    <mapping path="/office/moblft/lftSchedule" exclue="true"/>
+    <mapping path="/office/moblft/lftPreview" exclue="true"/>
+    <mapping path="/office/arch/mcard/mcardIsuList" exclue="true"/>
+</sitemesh>

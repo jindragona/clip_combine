@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.user.dao.UserDao">
+
+	<select id="TotalRecords" resultType="int">
+		SELECT
+			COUNT(*) AS totalRecords
+		FROM TB_SYS_USR
+    </select>
+    
+    <sql id="searchSql">
+        <if test='userType != null and !userType.equals("")'>
+            AND USR_TYPE = #{userType}
+        </if>
+        
+        <if test='teamName != null and !teamName.equals("")'>
+        	AND TEAM_NM LIKE '%'||#{teamName}||'%'
+        </if>
+        
+        <if test='dateType != null and dateType.equals("REG")'>
+            <if test='stime != null and !stime.equals("")'>
+	            AND INP_DTT >= to_date(#{stime}, 'YYYY-MM-DD')
+	        </if>
+	        <if test='etime != null and !etime.equals("")'>
+	            AND INP_DTT <![CDATA[ <= ]]> to_date(#{etime}, 'YYYY-MM-DD') + 1
+	        </if>
+        </if>
+        <if test='dateType != null and dateType.equals("LOG")'>
+            <if test='stime != null and !stime.equals("")'>
+	            AND LAST_LOGIN_DTT >= to_date(#{stime}, 'YYYY-MM-DD')
+	        </if>
+	        <if test='etime != null and !etime.equals("")'>
+	            AND LAST_LOGIN_DTT <![CDATA[ <= ]]> to_date(#{etime}, 'YYYY-MM-DD') + 1
+	        </if>
+        </if>
+        
+        <if test='searchType != null and searchType.equals("KEY")'>
+            <if test='encWord != null and !encWord.equals("")'>
+	            AND USR_ID LIKE '%'||#{encWord}||'%'
+	        </if>
+        </if>
+        <if test='searchType != null and searchType.equals("NAME")'>
+            <if test='encWord != null and !encWord.equals("")'>
+	            AND USR_NM LIKE '%'||#{encWord}||'%'
+	        </if>
+        </if>
+    </sql>
+    
+    <select id="findTotalRecordsBySearch" parameterType="com.kt.midas.adm.web.user.vo.UserSearchTO" resultType="int">
+        SELECT
+            COUNT(*) AS totalRecords
+        FROM TB_SYS_USR
+        <where>
+            <include refid="searchSql" />
+        </where>
+    </select>
+    
+    <select id="findBySearch" parameterType="com.kt.midas.adm.web.user.vo.UserSearchTO" resultType="com.kt.midas.adm.web.user.vo.UserVO">
+		SELECT
+			LIST.userSeq,
+            LIST.userId,
+            LIST.userName,
+            LIST.phoneNum,
+            LIST.contNum,
+            LIST.hofcName,
+            LIST.teamName,
+            LIST.insDt,
+            LIST.insUser,
+            LIST.pwdMdfDt,
+            LIST.lastLoginDt,
+            LIST.pwdErrCnt,
+            LIST.userType,
+            LIST.insUserName,
+            LIST.usrStus,
+            LIST.usrStusName
+        FROM
+        (
+            SELECT
+            	USR_SRLNUM AS userSeq,
+                USR_ID AS userId,
+	    		USR_NM as userName,
+	    		PHONE_NUM as phoneNum,
+	    		CONT_NUM as contNum,
+	    		HOFC_NM as hofcName,
+	    		TEAM_NM as teamName,
+	    		INP_DTT as insDt,
+	    		INPR_ID as insUser,
+	    		PWD_MDF_DT as pwdMdfDt,
+	    		LAST_LOGIN_DTT as lastLoginDt,
+	    		PWD_ERR_CNT as pwdErrCnt,
+	    		USR_TYPE as userType,
+	    		INPR_NM insUserName,
+	    		USR_STUS AS usrStus,
+	    		CASE
+	    			WHEN USR_STUS = 'A' THEN '사용'
+	    			ELSE '중단'
+	    		END AS usrStusName
+            FROM TB_SYS_USR
+            <where>
+                <include refid="searchSql" />
+            </where>
+            ORDER BY INP_DTT DESC
+        ) as list
+        LIMIT 10 OFFSET (#{pageNo} - 1) <![CDATA[ * ]]> 10
+	</select>
+	
+	<select id="getUserDetail" parameterType="int" resultType="com.kt.midas.adm.web.user.vo.UserVO">
+		SELECT
+			USR_SRLNUM AS userSeq,
+            USR_ID AS userId,
+    		USR_NM as userName,
+    		USR_PWD AS userPwd,
+    		PHONE_NUM as phoneNum,
+    		CONT_NUM as contNum,
+    		HOFC_NM as hofcName,
+    		TEAM_NM as teamName,
+    		INP_DTT as insDt,
+    		INPR_ID as insUser,
+    		PWD_MDF_DT as pwdMdfDt,
+    		LAST_LOGIN_DTT as lastLoginDt,
+    		PWD_ERR_CNT as pwdErrCnt,
+    		USR_TYPE as userType,
+    		INPR_NM insUserName,
+    		USR_STUS AS usrStus,
+    		CASE
+    			WHEN USR_STUS = 'A' THEN '사용'
+    			ELSE '중단'
+    		END AS usrStusName
+		FROM TB_SYS_USR
+		WHERE USR_SRLNUM = #{value}
+	</select>
+	
+	<insert id="insert" parameterType="com.kt.midas.adm.web.user.vo.UserTO">
+    	INSERT INTO TB_SYS_USR
+    	(
+    		USR_ID, USR_NM, USR_PWD, PHONE_NUM, CONT_NUM,
+    		HOFC_NM, TEAM_NM, INP_DTT, INPR_ID, PWD_MDF_DT, 
+    		LAST_LOGIN_DTT, PWD_ERR_CNT, USR_TYPE, INPR_NM, USR_EMAIL
+    	)
+    	VALUES
+    	(
+    		#{userId}, #{userName}, #{userPwd}, #{phoneNum}, #{contNum},
+    		#{hofcName}, #{teamName}, NOW(), #{insUser}, #{pwdMdfDt},
+    		NOW(), 0, #{userType}, #{insUserName}, #{email}
+    	)
+    </insert>
+    
+    <update id="pwdInit" parameterType="com.kt.midas.adm.web.user.vo.UserTO">
+    	UPDATE TB_SYS_USR
+    	SET
+    		USR_PWD = #{userPwd}
+    	WHERE USR_ID = #{userId}
+    </update>
+    
+    <update id="pwdErrorCntInit" parameterType="String">
+    	UPDATE TB_SYS_USR
+    	SET
+    		PWD_ERR_CNT = 0
+    	WHERE USR_ID = #{value}
+    </update>
+    
+    <select id="checkLogingId" parameterType="String" resultType="int">
+    	SELECT
+    		COUNT(*) AS CNT
+    	FROM TB_SYS_USR
+    	WHERE USR_ID = #{value}
+    </select>
+    
+    <select id="getUserList" parameterType="int" resultType="com.kt.midas.adm.web.user.vo.UserVO">
+    	SELECT
+    		USR.USR_SRLNUM AS userSeq,
+    		USR.USR_ID AS userId,
+    		USR.USR_NM as userName,
+    		USR.TEAM_NM as teamName,
+    		USR.INPR_ID as insUser
+    	FROM TB_SYS_USR AS USR
+    	INNER JOIN TB_SYS_USR_ROL AS ROL
+    	ON USR.USR_ID = ROL.USR_ID
+    	WHERE ROL.ROL_ID = #{value}
+    </select>
+    
+    <select id="notMappingUser" parameterType="int" resultType="com.kt.midas.adm.web.user.vo.UserVO">
+    	SELECT
+    		A.userSeq,
+			A.userId,
+			A.userName,
+			A.teamName,
+			A.insUser
+		FROM 
+		(
+		SELECT
+			USR_SRLNUM AS userSeq,
+			USR_ID AS userId,
+			USR_NM AS userName,
+			TEAM_NM AS teamName,
+			INPR_ID AS insUser
+		FROM TB_SYS_USR
+		) A LEFT JOIN
+		(
+		SELECT
+			USR.USR_ID AS userId,
+			USR.USR_NM AS userName,
+			USR.TEAM_NM AS teamName,
+			USR.INPR_ID AS insUser
+		FROM TB_SYS_USR AS USR 
+		INNER JOIN TB_SYS_USR_ROL AS ROL ON USR.USR_ID = ROL.USR_ID
+		WHERE ROL.ROL_ID = #{value}
+		) B ON A.USERID = B.USERID
+		WHERE B.USERID IS NULL
+    </select>
+    
+    <insert id="mappingUser" parameterType="com.kt.midas.adm.web.userauth.vo.UserMenuAuthTO">
+		INSERT INTO TB_SYS_USR_ROL
+		(
+			ROL_ID, USR_ID
+		)
+		VALUES
+		(
+			#{rolId}, #{userId}
+		)
+	</insert>
+	
+	<delete id="mappingCloseUser" parameterType="com.kt.midas.adm.web.userauth.vo.UserMenuAuthTO">
+		DELETE FROM TB_SYS_USR_ROL
+		WHERE ROL_ID = #{rolId}
+		AND USR_ID = #{userId}
+	</delete>
+	
+	<update id="modAdmRow" parameterType="com.kt.midas.adm.web.user.vo.UserTO">
+		UPDATE TB_SYS_USR
+		SET
+			USR_NM = #{userName},
+			HOFC_NM = #{hofcName},
+			TEAM_NM = #{teamName},
+			USR_TYPE = #{userType}
+		WHERE USR_ID = #{userId}
+	</update>
+	
+	<update id="stopUser" parameterType="String">
+		UPDATE TB_SYS_USR
+		SET 
+			USR_STUS = 'T'
+		WHERE USR_ID = #{value}
+	</update>
+	
+	<update id="useUser" parameterType="String">
+		UPDATE TB_SYS_USR
+		SET 
+			USR_STUS = 'A'
+		WHERE USR_ID = #{value}
+	</update>
+	
+	<select id="getAuthIpList" parameterType="com.kt.midas.adm.web.user.vo.UserTO" resultType="com.kt.midas.adm.web.user.vo.AuthIpVO">
+		SELECT
+			SYS_ACC_IP_ID as sysAccIpId,
+		    USR_ID as userId,
+		    SYS_ACC_IP_NM as sysAccIpNm,
+		    IP_TYPE as ipType,
+		    IP_ADR as ipAdr,
+		    USE_YN as useYn,
+		    CASE
+		    	WHEN USE_YN = 'Y' THEN '사용'
+		    	ELSE '미사용'
+		    END AS useYnName,
+		    CASE
+		    	WHEN IP_TYPE = '1' THEN '단일'
+		    	ELSE '범위'
+		    END AS ipTypeName,
+		    TO_CHAR(INP_DTT, 'YYYYY-MM-DD HH24:MI:SS') as inpDtt,
+		    INPR_ID as inprId,
+		    INPR_NM as inprNm
+		FROM TB_SYS_ACC_IP
+		WHERE USR_ID = #{userId}
+		ORDER BY INP_DTT DESC
+	</select>
+	
+	<insert id="userIpAuthAdd" parameterType="com.kt.midas.adm.web.user.vo.UserAuthIpTO">
+		<selectKey keyProperty="sysAccIpId" resultType="int" order="BEFORE">
+            SELECT NEXTVAL('SEQ_SYS_ACC_IP_ID')
+        </selectKey>
+		INSERT INTO TB_SYS_ACC_IP
+		(
+			SYS_ACC_IP_ID, USR_ID, SYS_ACC_IP_NM, IP_TYPE, IP_ADR,
+			USE_YN, INP_DTT, INPR_ID, INPR_NM
+		)
+		VALUES
+		(
+			#{sysAccIpId}, #{userId}, #{sysAccIpNm}, #{ipType}, #{ipAdr},
+			#{useYn}, NOW(), #{insUser}, #{insUSerName}
+		)
+	</insert>
+	
+	<update id="update" parameterType="com.kt.midas.adm.web.user.vo.UserTO">
+		UPDATE TB_SYS_USR
+		SET
+			HOFC_NM = #{hofcName},
+			TEAM_NM = #{teamName},
+			PWD_MDF_DT = TO_CHAR(NOW(), 'YYYYMMDD'),
+			USR_PWD = #{encUserNewPwd},
+			PHONE_NUM = #{phoneNum}
+		WHERE USR_ID = #{userId}
+	</update>
+	
+	<delete id="userIpAuthRemove" parameterType="com.kt.midas.adm.web.user.vo.UserAuthIpTO">
+		DELETE FROM TB_SYS_ACC_IP
+		WHERE SYS_ACC_IP_ID = #{sysAccIpId}
+	</delete>
+	
+	<select id="userIdPwdCheck" parameterType="com.kt.midas.adm.web.user.vo.UserTO" resultType="int">
+		SELECT
+			COUNT(*)
+		FROM TB_SYS_USR
+		WHERE USR_ID = #{userId}
+		AND USR_PWD = #{encUserOldPwd}
+	</select>
+</mapper>

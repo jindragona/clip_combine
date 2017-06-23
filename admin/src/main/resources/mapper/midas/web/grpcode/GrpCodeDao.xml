@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.grpcode.dao.GrpCodeDao">
+
+    <sql id="searchSql">
+        <if test='grpCodeName != null and grpCodeName != ""'>
+            AND CD_GRP_NM LIKE '%'||#{grpCodeName}||'%'
+        </if>
+        <if test='useYn != null and useYn != ""'>
+            AND USE_YN = #{useYn}
+        </if>
+    </sql>
+
+    <select id="findTotalRecordsBySearch" parameterType="com.kt.midas.adm.web.grpcode.vo.GrpCodeSearchTO" resultType="int">
+        SELECT
+            COUNT(*) AS totalRecords
+        FROM TB_CMN_CD_GRP
+        <where>
+            <include refid="searchSql" />
+        </where>
+    </select>
+
+    <select id="findBySearch" parameterType="com.kt.midas.adm.web.grpcode.vo.GrpCodeSearchTO" resultType="com.kt.midas.adm.web.grpcode.vo.GrpCodeVO">
+            SELECT
+                LIST.codeGrpId,
+                LIST.codeGrpName,
+                LIST.useYn,
+                LIST.useYnName
+            FROM
+            (
+                SELECT
+                    CD_GRP_ID as codeGrpId,
+		            CD_GRP_NM as codeGrpName,
+		            USE_YN as useYn,
+		            CASE
+		            	WHEN USE_YN = 'Y' THEN '사용'
+		             	ELSE '미사용'
+		            END AS useYnName
+                FROM TB_CMN_CD_GRP
+                <where>
+                    <include refid="searchSql" />
+                </where>
+                ORDER BY CD_GRP_ID DESC
+            ) as list
+            LIMIT 10 OFFSET (#{pageNo} - 1) <![CDATA[ * ]]> 10
+    </select>
+    
+    <insert id="insert" parameterType="com.kt.midas.adm.web.grpcode.vo.GrpCodeTO">
+    	INSERT INTO TB_CMN_CD_GRP
+    	(
+    		CD_GRP_ID, CD_GRP_NM, USE_YN
+    	)
+    	VALUES
+    	(
+    		#{grpCodeId}, #{grpCodeName}, #{useYn}
+    	)
+    </insert>
+    
+    <update id="update" parameterType="com.kt.midas.adm.web.grpcode.vo.GrpCodeTO">
+    	UPDATE TB_CMN_CD_GRP
+    	SET
+    		CD_GRP_NM = #{grpCodeName},
+    		USE_YN = #{useYn}
+    	WHERE CD_GRP_ID = #{grpCodeId}
+    </update>
+    
+    <delete id="deleteById" parameterType="String">
+    	DELETE FROM TB_CMN_CD_GRP
+    	WHERE CD_GRP_ID = #{value}
+    </delete>
+    
+    <select id="getGrpCodeDetail" parameterType="String" resultType="com.kt.midas.adm.web.grpcode.vo.GrpCodeVO">
+    	SELECT
+             CD_GRP_ID as codeGrpId,
+             CD_GRP_NM as codeGrpName,
+             USE_YN as useYn,
+             CASE
+             	WHEN USE_YN = 'Y' THEN '사용'
+             	ELSE '미사용'
+             END AS useYnName
+         FROM TB_CMN_CD_GRP
+         WHERE CD_GRP_ID = #{value}
+    </select>
+    
+    <select id="getGrpCodeList" resultType="com.kt.midas.adm.web.grpcode.vo.GrpCodeVO">
+    	SELECT
+             CD_GRP_ID as codeGrpId,
+             CD_GRP_NM as codeGrpName,
+             USE_YN as useYn,
+             CASE
+             	WHEN USE_YN = 'Y' THEN '사용'
+             	ELSE '미사용'
+             END AS useYnName
+         FROM TB_CMN_CD_GRP
+    </select>
+</mapper>

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="true" scan="true" scanPeriod="30 seconds">
+
+	<contextListener class="ch.qos.logback.classic.jul.LevelChangePropagator">
+		<resetJUL>true</resetJUL>
+	</contextListener>
+
+	<!-- To enable JMX Management -->
+	<jmxConfigurator />
+
+	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<target>System.out</target>
+		<encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger \(%C{0}:%L\) %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="SERVICE_LOG"
+		class="ch.qos.logback.core.rolling.RollingFileAppender">
+			<file>${midas.logs.path}/service.log</file>
+		<append>true</append>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<fileNamePattern>${midas.logs.path}/history/service.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+			<maxHistory>720</maxHistory>
+			<cleanHistoryON-START>false</cleanHistoryON-START>
+		</rollingPolicy>
+		<encoder>
+			<pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5level] [%thread] %logger \(%C{0}:%L\) %msg%n</pattern>
+		</encoder>
+	</appender>
+	
+	<appender name="USER_ACTION_HIS_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+	    <queueSize>1024</queueSize>
+	    <appender-ref ref="USER_ACTION_HIS_LOG" />
+	</appender>
+
+	<appender name="SERVICE_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>1024</queueSize>
+		<appender-ref ref="SERVICE_LOG" />
+	</appender>
+	
+	<appender name="console_ASYNC" class="ch.qos.logback.classic.AsyncAppender">
+		<queueSize>1024</queueSize>
+		<appender-ref ref="console" />
+	</appender>
+	
+	<!-- 3rdparty Loggers -->
+	<logger name="org.mybatis.spring" level="INFO"/>
+	
+	<!-- [START] SQL Logger -->
+	<logger name="midas.adm" level="TRACE"/><!-- SQL Mapper package Logging : TRACE -->
+	<!-- [END] SQL Logger -->
+	
+    <logger name="org.springframework" level="INFO"/>
+    
+    <logger name="com.kt.midas" level="DEBUG"/>
+	
+    <logger name="TRACE_LOG" level="INFO">
+	</logger>
+
+    <logger name="ERROR_LOG" level="INFO">
+	</logger>
+
+	<logger name="com.kt.midas" level="DEBUG">
+		<appender-ref ref="SERVICE_ASYNC" />
+	</logger>
+	
+    <!-- Root Logger -->
+	<root level="INFO">
+<!-- 		<appender-ref ref="SERVICE_ASYNC" /> -->
+		<appender-ref ref="console_ASYNC" />
+	</root>
+
+</configuration>

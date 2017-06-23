@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="midas.adm.web.code.dao.CodeDao">
+
+	<sql id="searchSql">
+        <if test='codeGrpId != null and codeGrpId != ""'>
+            AND CD_GRP_ID = #{codeGrpId}
+        </if>
+        
+        <if test='codeName != null and codeName != ""'>
+        	AND CD_NM LIKE '%'||#{codeName}||'%'
+        </if>
+    </sql>
+
+    <select id="findTotalRecordsBySearch" parameterType="com.kt.midas.adm.web.code.vo.CodeSearchTO" resultType="int">
+        SELECT
+            COUNT(*) AS totalRecords
+        FROM TB_CMN_CD
+        <where>
+            <include refid="searchSql" />
+        </where>
+    </select>
+
+    <select id="findBySearch" parameterType="com.kt.midas.adm.web.code.vo.CodeSearchTO" resultType="com.kt.midas.adm.web.code.vo.CodeVO">
+            SELECT
+                LIST.codeId,
+                LIST.codeGrpId,
+                LIST.codeName,
+                LIST.useYn,
+                LIST.useYnName,
+                LIST.codeOrd,
+                LIST.insDt,
+                LIST.insUser,
+                LIST.insUserName
+            FROM
+            (
+                SELECT
+                    CD_ID as codeId,
+                    CD_GRP_ID as codeGrpId,
+                    CD_NM as codeName,
+                    USE_YN as useYn,
+                    CASE
+                    	WHEN USE_YN = 'Y' THEN '사용'
+                    	ELSE '미사용'
+                    END AS useYnName,
+                    CMN_CD_ODR as codeOrd,
+                    INP_DTT as insDt,
+                    INPR_ID as insUser,
+                    INPR_NM as insUserName
+                FROM TB_CMN_CD
+                <where>
+		            <include refid="searchSql" />
+		        </where>
+		        ORDER BY CD_ID DESC
+            ) as list
+            LIMIT 10 OFFSET (#{pageNo} - 1) <![CDATA[ * ]]> 10
+    </select>
+    
+    <insert id="insert" parameterType="com.kt.midas.adm.web.code.vo.CodeTO">
+    	INSERT INTO TB_CMN_CD
+    	(
+    		CD_ID, CD_GRP_ID, CD_NM, USE_YN, CMN_CD_ODR, 
+    		INP_DTT, INPR_ID, INPR_NM
+    	)
+    	VALUES
+    	(
+    		#{codeId}, #{codeGrpId}, #{codeName}, #{useYn}, #{codeOdr},
+    		now(), #{insUser}, #{insUserName}
+    	)
+    </insert>
+    
+    <update id="update" parameterType="com.kt.midas.adm.web.code.vo.CodeTO">
+    	UPDATE TB_CMN_CD
+    	SET
+    		CD_GRP_ID = #{codeGrpId},
+    		CD_NM = #{codeName},
+    		USE_YN = #{useYn},
+    		CMN_CD_ODR = #{codeOdr}
+    	WHERE CD_ID = #{codeId}
+    </update>
+    
+    <delete id="deleteById" parameterType="String">
+    	DELETE FROM TB_CMN_CD
+    	WHERE CD_ID = #{value}
+    </delete>
+    
+    <select id="getCodeDetail" parameterType="String" resultType="com.kt.midas.adm.web.code.vo.CodeVO">
+         SELECT
+			CD_ID as codeId
+			,CD_GRP_ID as codeGrpId
+			,CD_NM as codeName
+			,USE_YN as useYn
+			,CMN_CD_ODR as codeOrd
+			,INP_DTT as insDt
+			,INPR_ID as insUser
+			,INPR_NM as insUserName
+		FROM TB_CMN_CD
+		WHERE CD_ID = #{value}
+    </select>
+    
+    <select id="commonCodeList" parameterType="com.kt.midas.adm.web.code.vo.CodeSearchTO" resultType="com.kt.midas.adm.web.code.vo.CommonCodeVO">
+    	SELECT 
+			CD_ID AS codeId,
+			CD_NM AS codeName
+		FROM TB_CMN_CD
+		WHERE CD_GRP_ID = #{codeGrpId}
+		ORDER BY CMN_CD_ODR
+    </select>
+    
+    <select id="checkCodeId" parameterType="String" resultType="int">
+    	SELECT
+    		COUNT(*) AS CNT
+    	FROM TB_CMN_CD
+    	WHERE CD_ID = #{value}
+    </select>
+</mapper>
